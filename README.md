@@ -26,7 +26,7 @@ A interface HTTP/Web permite a interação com os pedidos. Abaixo estão exemplo
   curl --location 'http://localhost:8000/order' \
   --header 'Content-Type: application/json' \
   --data '{
-      "id": "1",
+      "id": "abcd123",
       "price": 50.5,
       "tax": 0.12
   }'
@@ -48,7 +48,7 @@ A aplicação fornece uma API GraphQL para interação. Abaixo estão alguns exe
 
   ```graphql
   mutation createOrder {
-    createOrder(input: {id: "2", Price: 50.5, Tax: 0.12}) {
+    createOrder(input: {id: "abcd1234", Price: 50.5, Tax: 0.12}) {
       id
       Price
       Tax
@@ -84,7 +84,7 @@ Para interagir com o serviço gRPC da sua aplicação usando Evans, siga as inst
 **Criar pedido:**
 
       ```sh
-      grpcurl -plaintext -d '{"id":"xyz","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
+      grpcurl -plaintext -d '{"id":"abcd1235","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
       ```
 
 
