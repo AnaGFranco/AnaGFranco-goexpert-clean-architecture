@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:alpine
+    container_name: postgresdb
+    hostname: db
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - connection
+
+  app:
+    container_name: be-project
+    environment:
+      - DB_DRIVER=mysql
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - WEB_SERVER_PORT=:8000
+      - GRPC_SERVER_PORT=50051
+      - GRAPHQL_SERVER_PORT=8080
+    build:
+      context: .
+      dockerfile: Makefile
+    restart: unless-stopped
+    ports:
+      - 45000:45000
+    depends_on:
+      - db
+    networks:
+      - connection
+
+networks:
+  connection:
+    driver: bridge
