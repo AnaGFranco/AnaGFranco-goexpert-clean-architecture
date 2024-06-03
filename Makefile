@@ -1,5 +1,5 @@
 # Nome do executável
-APP_NAME := app
+APP_NAME := goexpert-clean-architecture
 
 # Diretório onde o Makefile está localizado
 BASE_DIR := $(shell pwd)
@@ -27,7 +27,7 @@ PROTO_DIR := ./internal/infra/grpc/protofiles
 PB_DIR := ./internal/infra/grpc/pb
 
 # Comandos do Makefile
-.PHONY: all build run fmt test cover docker-build docker-up docker-down docker-compose-up grpc
+.PHONY: all build run fmt test cover docker-build docker-up docker-down docker-compose-up clean setup grpc
 
 all: build
 
@@ -74,7 +74,8 @@ docker-down:
 
 # Levanta os containers usando Docker Compose (alvo específico)
 docker-compose-up:
-	@echo "$(COLOR_INFO)==> Iniciando os containers com Docker Compose$(COLOR_RESET)"
+	@echo "$(COLOR_INFO)==> Derrubando containers antigos e iniciando novos containers com Docker Compose$(COLOR_RESET)"
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) down
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up -d
 
 # Limpa arquivos temporários e cache
