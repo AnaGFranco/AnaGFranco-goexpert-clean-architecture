@@ -60,8 +60,8 @@ A aplicação fornece uma API GraphQL para interação. Abaixo estão alguns exe
 - **Listar pedidos:**
 
   ```graphql
-  query listOrder {
-    listOrder {
+  query  {
+    listOrders {
       id
       Price
       Tax
