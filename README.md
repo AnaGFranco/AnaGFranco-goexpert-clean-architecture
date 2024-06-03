@@ -83,13 +83,10 @@ Para interagir com o serviço gRPC da sua aplicação usando Evans, siga as inst
 
 **Criar pedido:**
 
-      ```sh
       grpcurl -plaintext -d '{"id":"abcd1235","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
-      ```
 
 
 **Listar pedidos:**
 
-      ```sh
     grpcurl -plaintext -d '{}' localhost:50051 pb.OrderService/ListOrders
-      ```
+      
