@@ -24,7 +24,7 @@
   curl --location 'http://localhost:8000/order' \
   --header 'Content-Type: application/json' \
   --data '{
-      "id": "banana3",
+      "id": "9",
       "price": 50.5,
       "tax": 0.12
   }'
@@ -43,7 +43,7 @@
 
   ```graphql
   mutation createOrder {
-    createOrder(input: {id: "banana2", Price: 50.5, Tax: 0.12}) {
+    createOrder(input: {id: "8", Price: 50.5, Tax: 0.12}) {
       id
       Price
       Tax
@@ -69,7 +69,7 @@
 
 **Criar pedido:**
 
-      grpcurl -plaintext -d '{"id":"banana1","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
+      grpcurl -plaintext -d '{"id":"7","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
 
 
 **Listar pedidos:**
