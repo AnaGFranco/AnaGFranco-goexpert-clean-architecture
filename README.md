@@ -9,16 +9,14 @@
 2. Abra um terminal na raiz do projeto.
 3. Execute o seguinte comando para construir e iniciar os serviços definidos no arquivo docker-compose:
    ```sh
-   make docker-compose-up
+   docker-compose build
    ```
 4. Execute o seguinte comando para iniciar a aplicação
    ```sh
-   make run
+   docker-compose up
    ```
    
 ###  API HTTP/Web
-
-A interface HTTP/Web permite a interação com os pedidos. Abaixo estão exemplos de como usar os endpoints HTTP:
 
 - **Criar um novo pedido:**
 
@@ -26,7 +24,7 @@ A interface HTTP/Web permite a interação com os pedidos. Abaixo estão exemplo
   curl --location 'http://localhost:8000/order' \
   --header 'Content-Type: application/json' \
   --data '{
-      "id": "abcd123",
+      "id": "banana3",
       "price": 50.5,
       "tax": 0.12
   }'
@@ -41,14 +39,11 @@ A interface HTTP/Web permite a interação com os pedidos. Abaixo estão exemplo
 
 ###  GraphQL
 
-A aplicação fornece uma API GraphQL para interação. Abaixo estão alguns exemplos de queries e mutations que podem ser realizadas. O GraphQL Playground pode ser acessado em [http://localhost:8080/](http://localhost:8080/).
-
-
 - **Criar pedido:**
 
   ```graphql
   mutation createOrder {
-    createOrder(input: {id: "abcd1234", Price: 50.5, Tax: 0.12}) {
+    createOrder(input: {id: "banana2", Price: 50.5, Tax: 0.12}) {
       id
       Price
       Tax
@@ -72,18 +67,9 @@ A aplicação fornece uma API GraphQL para interação. Abaixo estão alguns exe
 
 ### GRPC 
 
-Para interagir com o serviço gRPC da sua aplicação usando Evans, siga as instruções abaixo:
-
-1. Execute o comando para iniciar o Evans em modo REPL, permitindo a interação com o serviço gRPC da aplicação:
-   ```sh
-   make grpc-run
-   ```
-
-2. Chamando métodos do serviço OrderService:
-
 **Criar pedido:**
 
-      grpcurl -plaintext -d '{"id":"abcd1235","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
+      grpcurl -plaintext -d '{"id":"banana1","price": 100.5, "tax": 0.5}' localhost:50051 pb.OrderService/CreateOrder
 
 
 **Listar pedidos:**
