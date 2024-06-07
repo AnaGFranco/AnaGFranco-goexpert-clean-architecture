@@ -2,23 +2,25 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/sqlite3"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"goexpert-clean-architecture/configs"
+	"goexpert-clean-architecture/internal/event"
 	event_handler "goexpert-clean-architecture/internal/event/handler"
+	"goexpert-clean-architecture/internal/infra/database"
 	"goexpert-clean-architecture/internal/infra/graph"
 	"goexpert-clean-architecture/internal/infra/grpc/pb"
 	"goexpert-clean-architecture/internal/infra/grpc/service"
@@ -26,42 +28,38 @@ import (
 	usecase "goexpert-clean-architecture/internal/usecase/order"
 	"goexpert-clean-architecture/pkg/events"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	cfg, err := configs.LoadConfig(".")
+	cfg, err := configs.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	db := connectToDatabase()
+	db, err := connectToDatabase()
+	if err != nil {
+		panic(err)
+	}
 	defer db.Close()
 
 	applyDatabaseMigrations(db)
 
 	rabbitMQChannel := connectToRabbitMQ()
+	defer rabbitMQChannel.Close()
 
 	eventDispatcher := setupEventDispatcher(rabbitMQChannel)
 
 	createOrderUseCase := setupCreateOrderUseCase(db, eventDispatcher)
 	listOrderUseCase := setupListOrderUseCase(db)
 
-	startRestServer(cfg.WebServerPort, db, eventDispatcher)
+	startRestServer(cfg.WebServerPort, createOrderUseCase, listOrderUseCase)
 	startGRPCServer(cfg.GRPCServerPort, *createOrderUseCase, *listOrderUseCase)
 	startGraphQLServer(cfg.GraphQLServerPort, *createOrderUseCase, *listOrderUseCase)
 }
 
-func connectToDatabase() *sql.DB {
-	db, err := sql.Open("sqlite3", "./database.db")
-	if err != nil {
-		panic(err)
-	}
-	return db
-}
-
 func applyDatabaseMigrations(db *sql.DB) {
-	instance, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,18 +69,27 @@ func applyDatabaseMigrations(db *sql.DB) {
 		log.Fatal(err)
 	}
 
-	m, err := migrate.NewWithInstance("file", fSrc, "sqlite3", instance)
+	m, err := migrate.NewWithInstance("file", fSrc, "postgres", driver)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal(err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal(err)
 	}
 }
 
 func connectToRabbitMQ() *amqp.Channel {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@localhost:5672/"
+	}
+
+	conn, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
 		panic(err)
 	}
@@ -102,17 +109,20 @@ func setupEventDispatcher(ch *amqp.Channel) *events.EventDispatcher {
 }
 
 func setupCreateOrderUseCase(db *sql.DB, eventDispatcher *events.EventDispatcher) *usecase.CreateOrderUseCase {
-	return NewCreateOrderUseCase(db, eventDispatcher)
+	orderRepository := database.NewOrderRepository(db)
+	orderCreated := event.NewOrderCreated()
+	return usecase.NewCreateOrderUseCase(orderRepository, orderCreated, eventDispatcher)
 }
 
 func setupListOrderUseCase(db *sql.DB) *usecase.ListOrderUseCase {
-	return NewListOrderUseCase(db)
+	orderRepository := database.NewOrderRepository(db)
+	return usecase.NewListOrderUseCase(orderRepository)
 }
 
-func startRestServer(port string, db *sql.DB, eventDispatcher *events.EventDispatcher) {
-	ws := rest.NewServer(port)
+func startRestServer(port string, createOrderUseCase *usecase.CreateOrderUseCase, listOrderUseCase *usecase.ListOrderUseCase) {
+	ws := rest.NewServer(":8000")
 	orderPath := "/order"
-	webOrderHandler := NewWebOrderHandler(db, eventDispatcher)
+	webOrderHandler := rest.NewWebOrderHandler(createOrderUseCase, listOrderUseCase)
 	ws.AddHandler(rest.NewRoute(orderPath, "POST", webOrderHandler.Create))
 	ws.AddHandler(rest.NewRoute(orderPath, "GET", webOrderHandler.GetOrders))
 	fmt.Println("Starting REST server on port", port)
@@ -151,4 +161,22 @@ func startGraphQLServer(port string, createOrderUseCase usecase.CreateOrderUseCa
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Failed to start GraphQL server: %v", err)
 	}
+}
+
+func connectToDatabase() (*sql.DB, error) {
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

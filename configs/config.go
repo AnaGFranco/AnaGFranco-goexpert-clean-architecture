@@ -1,8 +1,10 @@
 package configs
 
-import "github.com/spf13/viper"
+import (
+	"github.com/spf13/viper"
+)
 
-type conf struct {
+type Conf struct {
 	DBDriver          string `mapstructure:"DB_DRIVER"`
 	DBHost            string `mapstructure:"DB_HOST"`
 	DBPort            string `mapstructure:"DB_PORT"`
@@ -14,20 +16,28 @@ type conf struct {
 	GraphQLServerPort string `mapstructure:"GRAPHQL_SERVER_PORT"`
 }
 
-func LoadConfig(path string) (*conf, error) {
-	var cfg *conf
-	viper.SetConfigName("app_config")
-	viper.SetConfigType("env")
-	viper.AddConfigPath(path)
-	viper.SetConfigFile(".env")
+func LoadConfig() (*Conf, error) {
+	var cfg Conf
+
+	// Set default values
+	viper.SetDefault("DB_DRIVER", "mysql")
+	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_PORT", "3306")
+	viper.SetDefault("DB_USER", "root")
+	viper.SetDefault("DB_PASSWORD", "root")
+	viper.SetDefault("DB_NAME", "orders")
+	viper.SetDefault("WEB_SERVER_PORT", "8000")
+	viper.SetDefault("GRPC_SERVER_PORT", "50051")
+	viper.SetDefault("GRAPHQL_SERVER_PORT", "8080")
+
+	// Read environment variables
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
+
+	// Unmarshal the config into the struct
+	err := viper.Unmarshal(&cfg)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
-		panic(err)
-	}
-	return cfg, err
+
+	return &cfg, nil
 }

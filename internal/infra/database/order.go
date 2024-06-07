@@ -15,10 +15,12 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 }
 
 func (r *OrderRepository) CreateOrder(order *entity.Order) error {
-	stmt, err := r.Db.Prepare("INSERT INTO orders (id, price, tax, final_price) VALUES (?, ?, ?, ?)")
+	stmt, err := r.Db.Prepare("INSERT INTO orders (id, price, tax, final_price) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(order.ID, order.Price, order.Tax, order.FinalPrice)
 	if err != nil {
 		return err
@@ -28,7 +30,7 @@ func (r *OrderRepository) CreateOrder(order *entity.Order) error {
 
 func (r *OrderRepository) GetTotal() (int, error) {
 	var total int
-	err := r.Db.QueryRow("Select count(*) from orders").Scan(&total)
+	err := r.Db.QueryRow("SELECT count(*) FROM orders").Scan(&total)
 	if err != nil {
 		return 0, err
 	}
@@ -36,7 +38,7 @@ func (r *OrderRepository) GetTotal() (int, error) {
 }
 
 func (r *OrderRepository) GetOrders() ([]*entity.Order, error) {
-	rows, err := r.Db.Query("SELECT * FROM orders")
+	rows, err := r.Db.Query("SELECT id, price, tax, final_price FROM orders")
 	if err != nil {
 		return nil, err
 	}

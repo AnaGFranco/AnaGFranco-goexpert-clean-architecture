@@ -4,34 +4,27 @@ import (
 	"encoding/json"
 	"goexpert-clean-architecture/internal/usecase/order"
 	"net/http"
-
-	"goexpert-clean-architecture/internal/entity"
-	"goexpert-clean-architecture/pkg/events"
 )
 
 type OrderHandler struct {
-	EventDispatcher   events.EventDispatcherInterface
-	OrderRepository   entity.OrderRepositoryInterface
-	OrderCreatedEvent events.EventInterface
+	CreateOrderUseCase *order.CreateOrderUseCase
+	ListOrderUseCase   *order.ListOrderUseCase
 }
 
 func NewWebOrderHandler(
-	EventDispatcher events.EventDispatcherInterface,
-	OrderRepository entity.OrderRepositoryInterface,
-	OrderCreatedEvent events.EventInterface,
+	createOrderUseCase *order.CreateOrderUseCase,
+	listOrderUseCase *order.ListOrderUseCase,
 ) *OrderHandler {
 	return &OrderHandler{
-		EventDispatcher:   EventDispatcher,
-		OrderRepository:   OrderRepository,
-		OrderCreatedEvent: OrderCreatedEvent,
+		CreateOrderUseCase: createOrderUseCase,
+		ListOrderUseCase:   listOrderUseCase,
 	}
 }
 
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	listOrder := order.NewListOrderUseCase(h.OrderRepository)
-	response, err := listOrder.GetOrders()
+	response, err := h.ListOrderUseCase.GetOrders()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -42,7 +35,6 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	return
 }
 
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -55,8 +47,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createOrder := order.NewCreateOrderUseCase(h.OrderRepository, h.OrderCreatedEvent, h.EventDispatcher)
-	output, err := createOrder.Execute(dto)
+	output, err := h.CreateOrderUseCase.Execute(dto)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

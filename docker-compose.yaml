@@ -1,42 +1,46 @@
-version: '3.9'
+version: '3.8'
+
 services:
   db:
-    image: postgres:alpine
-    container_name: postgresdb
-    hostname: db
+    image: postgres:13-alpine
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-    restart: unless-stopped
+      POSTGRES_DB: orders
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
     ports:
-      - "127.0.0.1:5432:5432"
+      - "5432:5432"
     networks:
-      - connection
+      - my-network
 
   app:
-    container_name: be-project
-    environment:
-      - DB_DRIVER=postgres
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - WEB_SERVER_PORT=:8000
-      - GRPC_SERVER_PORT=50051
-      - GRAPHQL_SERVER_PORT=8080
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - 45000:45000
+    build: .
     depends_on:
       - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: orders
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+      - "50051:50051"
     networks:
-      - connection
+      - my-network
+    container_name: meu-projeto
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - my-network
 
 networks:
-  connection:
+  my-network:
     driver: bridge
